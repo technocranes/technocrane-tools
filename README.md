@@ -1,5 +1,6 @@
 # Technocrane Tools
-Tools that help to emulate data packets or analyze incoming packets data
+ Tools that help to emulate data packets or analyze incoming packets data
+The binaries could be found in Release section of the repository.
 
 ## Data Display
 
@@ -14,6 +15,10 @@ datadisplay.exe -d COM1
 
 Usage example to stream packets from *.cgi file
 datagenerator.exe --open "D:\\Work\\Technocrane\\Result\\test-cgi.cgi" --timecode
+
+## Sources
+
+  There are VS 2013 project files to compile application for windows. Original applications has been made for Linux and to make them work on Windows I added open source analog libraries.
 
 # Contact
 
