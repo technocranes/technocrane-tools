@@ -55,6 +55,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;WIN32_LEAN_AND_MEAN;STATIC_GETOPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\ThirdParty</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -79,20 +80,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cgidata.cpp" />
-    <ClCompile Include="datadisplay.cpp" />
-    <ClCompile Include="drand48.cpp" />
-    <ClCompile Include="getopt.c" />
-    <ClCompile Include="systime.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="..\Source\cgidata.cpp" />
+    <ClCompile Include="..\Source\datadisplay.cpp" />
+    <ClCompile Include="..\ThirdParty\drand48.cpp" />
+    <ClCompile Include="..\ThirdParty\getopt.c" />
+    <ClCompile Include="..\ThirdParty\systime.cpp" />
+    <ClCompile Include="..\Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cgidata.h" />
-    <ClInclude Include="datadisplay.h" />
-    <ClInclude Include="drand48.h" />
-    <ClInclude Include="getopt.h" />
-    <ClInclude Include="systime.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="..\Source\cgidata.h" />
+    <ClInclude Include="..\Source\datadisplay.h" />
+    <ClInclude Include="..\ThirdParty\drand48.h" />
+    <ClInclude Include="..\ThirdParty\getopt.h" />
+    <ClInclude Include="..\ThirdParty\systime.h" />
+    <ClInclude Include="..\Source\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
