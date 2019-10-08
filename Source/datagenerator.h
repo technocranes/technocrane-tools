@@ -14,7 +14,8 @@
 class DGOptions{
  public:
   enum{x = 256, y, z, pan, tilt, roll, zoom, focus, iris, panTilt, xyPan, loop, eight, 
-       random, randomFull, run_start, run_end, cam_start, cam_end, time_code, filename}; 
+       random, randomFull, run_start, run_end, cam_start, cam_end, time_code, filename,
+	network}; 
   
   enum{frameRatePAL = 25};
 
