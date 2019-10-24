@@ -55,6 +55,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;STATIC_GETOPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\ThirdParty</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -81,25 +82,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cgidata.cpp" />
-    <ClCompile Include="datagenerator.cpp" />
-    <ClCompile Include="drand48.cpp" />
-    <ClCompile Include="getopt.c" />
-    <ClCompile Include="network.cpp" />
-    <ClCompile Include="systime.cpp" />
-    <ClCompile Include="usleep.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="..\Source\cgidata.cpp" />
+    <ClCompile Include="..\Source\datagenerator.cpp" />
+    <ClCompile Include="..\ThirdParty\drand48.cpp" />
+    <ClCompile Include="..\ThirdParty\getopt.c" />
+    <ClCompile Include="..\Source\network.cpp" />
+    <ClCompile Include="..\ThirdParty\systime.cpp" />
+    <ClCompile Include="..\ThirdParty\usleep.cpp" />
+    <ClCompile Include="..\Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cgidata.h" />
-    <ClInclude Include="datagenerator.h" />
-    <ClInclude Include="drand48.h" />
-    <ClInclude Include="getopt.h" />
-    <ClInclude Include="network.h" />
-    <ClInclude Include="systime.h" />
-    <ClInclude Include="unistd.h" />
-    <ClInclude Include="usleep.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="..\Source\cgidata.h" />
+    <ClInclude Include="..\Source\datagenerator.h" />
+    <ClInclude Include="..\ThirdParty\drand48.h" />
+    <ClInclude Include="..\ThirdParty\getopt.h" />
+    <ClInclude Include="..\Source\network.h" />
+    <ClInclude Include="..\ThirdParty\systime.h" />
+    <ClInclude Include="..\ThirdParty\unistd.h" />
+    <ClInclude Include="..\ThirdParty\usleep.h" />
+    <ClInclude Include="..\Source\utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="gpl.txt" />

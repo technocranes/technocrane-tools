@@ -99,7 +99,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
       {"fps",           1, 0, 'f'},
       {"errors",        1, 0, 'e'},
       {"device",        1, 0, 'd'},
-	  {"network",		1, 0, opt.client_port},
+	  {"network",		1, 0, opt.network},
 	  {"open",			1, 0, opt.filename},
       {0,               0, 0, 0}
     };
@@ -109,6 +109,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
 
     char *nextP = (char*)1;
     double per, amp, offset, phase, fps, dBuf;
+	int iBuf;
     long errorFreq;
 
     switch (c) {
@@ -240,7 +241,18 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         }
         cout<<"\nInvalid numeric \""<<optarg<<"\" in option --cam-end! Exiting...\n";
         exit(-1);
- 
+
+	  case DGOptions::network:
+		  iBuf = strtol(optarg, &nextP, 10);
+		  if (*nextP == '\0' && iBuf >= 0 && iBuf <= 65535)  // With 65535 max port number
+		  {
+			  if (opt.verbose) cout << "\n Setting UDP client port to " << iBuf << "\n";
+			  opt.client_port = iBuf;
+			  opt.generator_type = DGOptions::GENERATOR_NETWORK;
+			  break;
+		  }
+		  cout << "\nInvalid numeric \"" << optarg << "\" in option --network! Exiting...\n";
+		  exit(-1);
       case 'c':
         //cout<<"\noption \"-p\""<<flush;
         per = strtod(optarg , &nextP);
