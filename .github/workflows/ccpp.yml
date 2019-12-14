@@ -14,7 +14,7 @@ jobs:
         cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\" 
         .\MSBuild.exe $Env:GITHUB_WORKSPACE\Projects\datadisplay.vcxproj
         
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v1
       with:
-      name: DataDisplay
-      path: Result\DataDisplay.exe
+        name: DataDisplay
+        path: Result/DataDisplay.exe
