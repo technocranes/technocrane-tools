@@ -2,6 +2,10 @@
  Tools that help to emulate data packets or analyze incoming packets data
 The binaries could be found in Release section of the repository.
 
+<p align="left">
+  <a href="https://github.com/technocranes/technocrane-tools/Projects"><img alt="GitHub Actions status" src="https://github.com/technocranes/technocrane-tools/workflows/Main%20workflow/badge.svg"></a>
+</p>
+
 ## Data Display
 
  This is a tiny COM trace application that could help to see what data is receving on a specified com port.
