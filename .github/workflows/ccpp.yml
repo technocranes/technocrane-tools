@@ -13,3 +13,8 @@ jobs:
       run: |
         cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\" 
         .\MSBuild.exe $Env:GITHUB_WORKSPACE\Projects\datadisplay.vcxproj
+        
+    - uses: actions/upload-artifact@master
+      with:
+      name: DataDisplay
+      path: Result\DataDisplay.exe
