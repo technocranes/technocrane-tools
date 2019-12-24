@@ -26,6 +26,8 @@ class DDOptions{
   bool formatHex;
   bool verbose;
   bool summarize;
+  bool useUDP;
+  u16 port;
   std::string device; 
 };
 

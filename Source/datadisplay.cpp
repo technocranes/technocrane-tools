@@ -30,16 +30,26 @@
  ****************************************************************************
  */
 
-//#include <termios.h> 
+#ifndef _MSC_VER  
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <termios.h> 
+#include "getopt.h"
+#include <sys/time.h>
+#include <sys/stat.h>
+#else
+#include <winsock.h>
+#endif
+
 #include "unistd.h"
-//#include "getopt.h"
 #include <errno.h>
 #include <fcntl.h>
-//#include <sys/time.h>
-//#include <sys/stat.h>
+
 #include <cstdlib>
 #include <cstring>
 #include<iostream>
+#include<sstream>
 #include<iomanip>
 
 
@@ -48,6 +58,20 @@
 #include "datadisplay.h"
 
 using namespace std;
+
+union SHandleID
+{
+#ifndef _MSC_VER
+	int		m_Handle;
+#else
+	HANDLE	m_Handle;
+	SOCKET	m_Socket;
+#endif
+};
+
+#ifdef _MSC_VER
+OVERLAPPED osReader = { 0 };
+#endif
 
 void getOptions(int argc, char * const argv[], DDOptions &opt){
   int c;
@@ -64,10 +88,12 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
       {"verbose",       0, 0, 'v'},
       {"help",          0, 0, 'h'},
       {"device",        1, 0, 'd'},
+      {"udp",           0, 0, 'n'},
+      {"port",          1, 0, 'o'},
       {0,               0, 0, 0}
     };
 
-    c = getopt_long (argc, argv, "crhvd:xpsue", long_options, &option_index);
+    c = getopt_long (argc, argv, "crhvd:o:xpsuen", long_options, &option_index);
     if (c == -1) break;
 
     switch (c) {
@@ -117,6 +143,16 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
         if(opt.verbose) cout<<"\noption \"-d\" with arg "<<optarg;
        break;
 
+      case 'o':
+        opt.port = strtol(optarg,0,10);
+        if(opt.verbose) cout<<"\noption \"-o\" with arg "<<optarg;
+       break;
+
+      case 'n':
+        opt.useUDP = true;
+        if(opt.verbose) cout<<"\noption \"-d\"";
+       break;
+
       case 'h':
         cout<<
         "\ndatadisplay is a program to display the data export of TECHNODOLLY camera cranes"
@@ -132,6 +168,14 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
         "\n -h, --help           show this help screen"
         "\n -v, --verbose        increase verbosity"
         "\n -d, --device DEV     read from character device or file DEV. Defaults to /dev/ttyS0."
+        "\n -n, --udp            read UDP data from network. By default, it reads all UDP packets"
+        "\n                      which are addressed to port 15245 on any network interface on" 
+        "\n                      this machine. The port number can be changed by parameter "
+        "\n                      '--port'." 
+        "\n                      When option '--udp' is choosen, the '--device' option has "
+        "\n                      no effect." 
+        "\n -o, --port           UDP port number on this machine which packets must be addressed "
+                                 "to. Default is 15245."
         "\n -s, --no-statistics  don't display some statistical information for each packet."
         "\n -p, --no-packets     don't display packet data."
         "\n -u, --no-unsynced    don't display characters when the receiver is out of sync."
@@ -206,6 +250,10 @@ void printEndStatistics(std::ostream &o, const dataReceptionStatus &DRS, const D
   o<<"\n------------------------------";
 }
 
+void printFrom(std::ostream &o, std::string fromAddress){
+  o<<"\n"<<fromAddress;
+  o<<std::dec<<"\n------------------------------";
+}
 void getStatistics(const CGIDataCartesian &data, dataReceptionStatus &DRS, bool isFirst){
   struct CGIDataCartesianVersion1 *data1 = (struct CGIDataCartesianVersion1*)(void*)&data;
   if(isFirst){
@@ -221,69 +269,132 @@ void getStatistics(const CGIDataCartesian &data, dataReceptionStatus &DRS, bool 
   */
 }
 
+int readData(const SHandleID& fd, char *buf, int bufSize, const DDOptions &opt, std::string *from = 0)
+{
+  if(!opt.useUDP)
+  {
+#ifndef _MSC_VER 
+    return(read(fd.m_Handle, buf, bufSize));
+#else
+    DWORD chars_read = 0;
+    if ( !ReadFile(fd.m_Handle, buf, bufSize, &chars_read, &osReader) ) 
+	{
+      if (GetLastError() == ERROR_IO_PENDING)
+      {
+        // waiting on read
+        Sleep(1000);
+      }
+    }
+    return chars_read;
+#endif
+  }
+  else
+  {
+	struct sockaddr_in srcAddr;
+    int srcAddrLen = sizeof(srcAddr);
+    int charsRead = recvfrom(fd.m_Socket, buf, bufSize, 0, (struct sockaddr *) &srcAddr, &srcAddrLen);
+    if(from)
+    {
+      std::ostringstream os;
+      os<<"received "<<charsRead<<" bytes from "<<inet_ntoa(srcAddr.sin_addr)
+        <<":"<<ntohs(srcAddr.sin_port);
+      *from = os.str();
+		}
+    return(charsRead);
+	}
+}
 
-int main(int argc, char **argv){
+
+
+int main(int argc, char **argv)
+{
   DDOptions opt;
   getOptions(argc, argv, opt);
   CGIDataCartesian data;
   class dataReceptionStatus DRS;
   const int bufSize = 300;
   char buf[bufSize];
+  
+  bool isRegularFile = false;
+  std::string fromAddress;
+
+  SHandleID		fd;
 
 #ifndef _MSC_VER
-  int fd = open(opt.device.c_str(), O_RDONLY);
-  if(fd == -1){
-    cout<<"\n"<<strerror(errno)<<"!\ncannot open "<<opt.device<<"!\n";
-    return(-1); 
+  
+
+  if(!opt.useUDP){
+    fd.m_Handle = open(opt.device.c_str(), O_RDONLY);
+    if(fd.m_Handle == -1){
+      cout<<"\n"<<strerror(errno)<<"!\ncannot open "<<opt.device<<"!\n";
+      return(-1); 
+    }
+    struct stat stats;
+    fstat(fd.m_Handle, &stats);
+    if((stats.st_mode & S_IFMT) == S_IFREG){
+      isRegularFile = true;
+    }
+  
+    setSerialAttributes(fd.m_Handle);
+  }else{
+    struct sockaddr_in serverAddr, clientAddr;
+    int serverAddrLen = sizeof(serverAddr);
+	fd.m_Handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    serverAddr.sin_family = AF_INET; 
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    //serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverAddr.sin_port = htons(opt.port);
+    bind(fd.m_Handle, (struct sockaddr *)&serverAddr, serverAddrLen);
+    clientAddr.sin_family = AF_INET; 
+    clientAddr.sin_addr.s_addr = inet_addr("192.168.0.112");
+    clientAddr.sin_port = htons(15246);
+    (void)clientAddr;
+    //With the line below, I can restrict my reception to packets originating from IP 
+    //address and port in clientAddr.
+    //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
   }
 #else
-  HANDLE fd = CreateFile(opt.device.c_str(),
-						GENERIC_READ,
-						0,
-						0,
-						OPEN_EXISTING,
-						FILE_FLAG_OVERLAPPED,
-						0 );
-  if (fd == INVALID_HANDLE_VALUE)
+  
+  if (!opt.useUDP)
   {
-	  // error opening port; abort
-	  cout<<"\n"<<GetLastError()<<"!\ncannot open "<<opt.device.c_str()<<"!\n";
-		return(-1); 
+	  fd.m_Handle = CreateFile(opt.device.c_str(),
+              GENERIC_READ,
+              0,
+              0,
+              OPEN_EXISTING,
+              FILE_FLAG_OVERLAPPED,
+              0 );
+    if (fd.m_Handle == INVALID_HANDLE_VALUE)
+    {
+      // error opening port; abort
+      cout<<"\n"<<GetLastError()<<"!\ncannot open "<<opt.device.c_str()<<"!\n";
+      return(-1); 
+    }
+
+    setSerialAttributes(fd.m_Handle);
+  }
+  else
+  {
+    struct sockaddr_in serverAddr, clientAddr;
+    int serverAddrLen = sizeof(serverAddr);
+	fd.m_Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    serverAddr.sin_family = AF_INET; 
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    //serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverAddr.sin_port = htons(opt.port);
+    bind(fd.m_Socket, (struct sockaddr *)&serverAddr, serverAddrLen);
+    clientAddr.sin_family = AF_INET; 
+    clientAddr.sin_addr.s_addr = inet_addr("192.168.0.112");
+    clientAddr.sin_port = htons(15246);
+    (void)clientAddr;
   }
 #endif
 
-  bool isRegularFile = false;
-
-#ifndef _MSC_VER
-  struct stat stats;
-  fstat(fd, &stats);
-  if((stats.st_mode & S_IFMT) == S_IFREG){
-    isRegularFile = true;
-	}
-#endif
-
-  OVERLAPPED osReader = {0};
-  setSerialAttributes(fd);
-
-  while(1){
   
-#ifndef _MSC_VER  
-	  int charsRead = read(fd, buf, bufSize);
-#else  
-	  DWORD charsRead = 0;
-	  if ( !ReadFile(fd, buf, bufSize, &charsRead, &osReader) ) {
-		  if (GetLastError() != ERROR_IO_PENDING)
-		  {
-			  // error in communications; report it
-			  break;
-		  }
-		  else
-		  {
-			  // waiting on read
-			  Sleep(1000);
-		  }
-	  }
-#endif
+  while(1)
+  {
+    int charsRead = readData(fd, buf, bufSize, opt, &fromAddress);
+    
 	  static int charCount = -1;
     //static int errorCount = -1;
     int fillState = CGI_DATA_LENGTH;
@@ -307,7 +418,7 @@ int main(int argc, char **argv){
       if(fillState == CGI_DATA_LENGTH){
         getStatistics(data, DRS, (DRS.completePackets == 0));
         DRS.completePackets++;
-        
+        if(opt.useUDP && opt.printStatistics) printFrom(cout, fromAddress);
         if(opt.printPackets)    printData(cout, data, opt);
         if(opt.printStatistics) printStatistics(cout, DRS);
         continue;           
