@@ -43,10 +43,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\Result\</OutDir>
+    <IncludePath>..\ThirdParty;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\Result\</OutDir>
+    <IncludePath>..\ThirdParty;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -59,6 +61,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -82,19 +85,19 @@
   <ItemGroup>
     <ClCompile Include="..\Source\cgidata.cpp" />
     <ClCompile Include="..\Source\datadisplay.cpp" />
-    <ClCompile Include="..\Source\drand48.cpp" />
-    <ClCompile Include="..\Source\getopt.c" />
+    <ClCompile Include="..\ThirdParty\drand48.cpp" />
+    <ClCompile Include="..\ThirdParty\getopt.c" />
     <ClCompile Include="..\Source\network.cpp" />
-    <ClCompile Include="..\Source\systime.cpp" />
+    <ClCompile Include="..\ThirdParty\systime.cpp" />
     <ClCompile Include="..\Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\cgidata.h" />
     <ClInclude Include="..\Source\datadisplay.h" />
-    <ClInclude Include="..\Source\drand48.h" />
-    <ClInclude Include="..\Source\getopt.h" />
+    <ClInclude Include="..\ThirdParty\drand48.h" />
+    <ClInclude Include="..\ThirdParty\getopt.h" />
     <ClInclude Include="..\Source\network.h" />
-    <ClInclude Include="..\Source\systime.h" />
+    <ClInclude Include="..\ThirdParty\systime.h" />
     <ClInclude Include="..\Source\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
