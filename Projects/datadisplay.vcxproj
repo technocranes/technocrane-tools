@@ -80,20 +80,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cgidata.cpp" />
-    <ClCompile Include="datadisplay.cpp" />
-    <ClCompile Include="drand48.cpp" />
-    <ClCompile Include="getopt.c" />
-    <ClCompile Include="systime.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="..\Source\cgidata.cpp" />
+    <ClCompile Include="..\Source\datadisplay.cpp" />
+    <ClCompile Include="..\Source\drand48.cpp" />
+    <ClCompile Include="..\Source\getopt.c" />
+    <ClCompile Include="..\Source\network.cpp" />
+    <ClCompile Include="..\Source\systime.cpp" />
+    <ClCompile Include="..\Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cgidata.h" />
-    <ClInclude Include="datadisplay.h" />
-    <ClInclude Include="drand48.h" />
-    <ClInclude Include="getopt.h" />
-    <ClInclude Include="systime.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="..\Source\cgidata.h" />
+    <ClInclude Include="..\Source\datadisplay.h" />
+    <ClInclude Include="..\Source\drand48.h" />
+    <ClInclude Include="..\Source\getopt.h" />
+    <ClInclude Include="..\Source\network.h" />
+    <ClInclude Include="..\Source\systime.h" />
+    <ClInclude Include="..\Source\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

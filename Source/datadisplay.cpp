@@ -40,6 +40,7 @@
 #include <sys/stat.h>
 #else
 #include <winsock.h>
+#include "network.h"
 #endif
 
 #include "unistd.h"
@@ -63,6 +64,7 @@ union SHandleID
 {
 #ifndef _MSC_VER
 	int		m_Handle;
+  int   m_Socket;
 #else
 	HANDLE	m_Handle;
 	SOCKET	m_Socket;
@@ -144,7 +146,7 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
        break;
 
       case 'o':
-        opt.port = strtol(optarg,0,10);
+        opt.port = static_cast<u16>(strtol(optarg,0,10));
         if(opt.verbose) cout<<"\noption \"-o\" with arg "<<optarg;
        break;
 
@@ -320,10 +322,8 @@ int main(int argc, char **argv)
 
   SHandleID		fd;
 
-#ifndef _MSC_VER
-  
-
   if(!opt.useUDP){
+#ifndef _MSC_VER
     fd.m_Handle = open(opt.device.c_str(), O_RDONLY);
     if(fd.m_Handle == -1){
       cout<<"\n"<<strerror(errno)<<"!\ncannot open "<<opt.device<<"!\n";
@@ -334,47 +334,28 @@ int main(int argc, char **argv)
     if((stats.st_mode & S_IFMT) == S_IFREG){
       isRegularFile = true;
     }
-  
-    setSerialAttributes(fd.m_Handle);
-  }else{
-    struct sockaddr_in serverAddr, clientAddr;
-    int serverAddrLen = sizeof(serverAddr);
-	fd.m_Handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    serverAddr.sin_family = AF_INET; 
-    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    //serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverAddr.sin_port = htons(opt.port);
-    bind(fd.m_Handle, (struct sockaddr *)&serverAddr, serverAddrLen);
-    clientAddr.sin_family = AF_INET; 
-    clientAddr.sin_addr.s_addr = inet_addr("192.168.0.112");
-    clientAddr.sin_port = htons(15246);
-    (void)clientAddr;
-    //With the line below, I can restrict my reception to packets originating from IP 
-    //address and port in clientAddr.
-    //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
-  }
 #else
-  
-  if (!opt.useUDP)
-  {
 	  fd.m_Handle = CreateFile(opt.device.c_str(),
-              GENERIC_READ,
-              0,
-              0,
-              OPEN_EXISTING,
-              FILE_FLAG_OVERLAPPED,
-              0 );
-    if (fd.m_Handle == INVALID_HANDLE_VALUE)
-    {
-      // error opening port; abort
-      cout<<"\n"<<GetLastError()<<"!\ncannot open "<<opt.device.c_str()<<"!\n";
-      return(-1); 
-    }
-
+		  GENERIC_READ,
+		  0,
+		  0,
+		  OPEN_EXISTING,
+		  FILE_FLAG_OVERLAPPED,
+		  0);
+	  if (fd.m_Handle == INVALID_HANDLE_VALUE)
+	  {
+		  // error opening port; abort
+		  cout << "\n" << GetLastError() << "!\ncannot open " << opt.device.c_str() << "!\n";
+		  return(-1);
+	  }
+#endif
     setSerialAttributes(fd.m_Handle);
   }
   else
   {
+#ifdef _MSC_VER
+	  Network_Initialize();
+#endif
     struct sockaddr_in serverAddr, clientAddr;
     int serverAddrLen = sizeof(serverAddr);
 	fd.m_Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -387,10 +368,11 @@ int main(int argc, char **argv)
     clientAddr.sin_addr.s_addr = inet_addr("192.168.0.112");
     clientAddr.sin_port = htons(15246);
     (void)clientAddr;
+    //With the line below, I can restrict my reception to packets originating from IP 
+    //address and port in clientAddr.
+    //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
   }
-#endif
 
-  
   while(1)
   {
     int charsRead = readData(fd, buf, bufSize, opt, &fromAddress);
@@ -439,13 +421,22 @@ int main(int argc, char **argv)
       
     }
     if(!charsRead && isRegularFile) break;
+
+	if (charsRead < 0)
+	{
+		return 1;
+	}
   }
   struct CGIDataCartesianVersion1 *data1 = (struct CGIDataCartesianVersion1*)(void*)&data;
   DRS.endDatum = data;
   DRS.endTime = data1->time;
   DRS.totalTime = DRS.endTime - DRS.startTime;
   if(opt.summarize) printEndStatistics(cout, DRS, opt);
-  cout<<"\n";
+  cout<<std::endl;
+
+#ifdef _MSC_VER
+  Network_Cleanup();
+#endif
   return(0);
 }
 

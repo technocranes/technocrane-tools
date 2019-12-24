@@ -10,7 +10,7 @@ class DDOptions{
  
   DDOptions() : printPackets (true), printStatistics(true), printUnsyncedChars(true),
 		formatColumns(false), formatRealTimeCSV(false), 
-    formatHex(false), verbose(false), summarize(false), 
+    formatHex(false), verbose(false), summarize(false), useUDP(false), port(15245),
 	device("/dev/ttyS2") 
   {
 #ifdef _MSC_VER

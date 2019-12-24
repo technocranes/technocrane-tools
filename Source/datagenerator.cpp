@@ -30,14 +30,22 @@
  ****************************************************************************
  */
 
-
-
+#ifndef _MSC_VER
+#include <unistd.h>
+#include <getopt.h>
+#include <sys/time.h>
+#else
 #include "unistd.h"
-#include <cstddef>
 #include "getopt.h"
-#include <errno.h>
 #include "systime.h"
 #include <time.h>
+#include "drand48.h"
+#include "usleep.h"
+#endif
+
+#include <cstddef>
+#include <errno.h>
+
 #include <fcntl.h>
 #include <cstdlib>
 #include <cstring>
@@ -51,15 +59,22 @@
 #include "utils.h"
 #include "datagenerator.h"
 
-#include "drand48.h"
-#include "usleep.h"
-
 #include "network.h"
 
 #include <vector>
 
 using namespace std;
 
+union SHandleID
+{
+#ifndef _MSC_VER
+	int		m_Handle;
+	int		m_Socket;
+#else
+	HANDLE	m_Handle;
+	SOCKET	m_Socket;
+#endif
+};
 
 void getOptions(int argc, char * const argv[], DGOptions &opt){
   int c;
@@ -95,21 +110,22 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
       {"cycle",         1, 0, 'c'},
       {"amplitude",     1, 0, 'a'},
       {"offset",        1, 0, 'o'},
-      {"phase",         1, 0, 'p'},
+      {"phase",         1, 0, 'P'},
       {"fps",           1, 0, 'f'},
       {"errors",        1, 0, 'e'},
       {"device",        1, 0, 'd'},
-	  {"network",		1, 0, opt.network},
+	  {"udp",           0, 0, 'n'},
+	  {"ip",            1, 0, 'p'},
+	  {"port",          1, 0, 'r'},
 	  {"open",			1, 0, opt.filename},
       {0,               0, 0, 0}
     };
 
-    c = getopt_long (argc, argv, "shtva:c:d:e:f:o:p:", long_options, &option_index);
+    c = getopt_long (argc, argv, "shtva:c:d:e:f:o:p:nr:", long_options, &option_index);
     if (c == -1) break;
 
     char *nextP = (char*)1;
     double per, amp, offset, phase, fps, dBuf;
-	int iBuf;
     long errorFreq;
 
     switch (c) {
@@ -241,18 +257,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         }
         cout<<"\nInvalid numeric \""<<optarg<<"\" in option --cam-end! Exiting...\n";
         exit(-1);
-
-	  case DGOptions::network:
-		  iBuf = strtol(optarg, &nextP, 10);
-		  if (*nextP == '\0' && iBuf >= 0 && iBuf <= 65535)  // With 65535 max port number
-		  {
-			  if (opt.verbose) cout << "\n Setting UDP client port to " << iBuf << "\n";
-			  opt.client_port = iBuf;
-			  opt.generator_type = DGOptions::GENERATOR_NETWORK;
-			  break;
-		  }
-		  cout << "\nInvalid numeric \"" << optarg << "\" in option --network! Exiting...\n";
-		  exit(-1);
+ 
       case 'c':
         //cout<<"\noption \"-p\""<<flush;
         per = strtod(optarg , &nextP);
@@ -290,7 +295,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         cout<<"\nInvalid numeric \""<<optarg<<"\" in option -o! Exiting...\n";
         exit(-1);
 
-      case 'p':
+      case 'P':
         phase = strtod(optarg , &nextP);
         if(*nextP == '\0'){
           opt.phase = pi2 * (1.0 / 360.0) * phase;
@@ -327,8 +332,8 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         break;
  
 	  case DGOptions::filename:
-		  opt.sourcefname = optarg;
-		  if(opt.verbose) cout<<"\noption \"-d\" with arg "<<optarg;
+		  opt.cgi_fname = optarg;
+		  if(opt.verbose) cout<<"\noption \"-o\" with arg "<<optarg;
 		  break;
 
       case 's':
@@ -346,6 +351,21 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         if(opt.verbose) cout<<"\noption \"-t\"";
         break;
 
+	  case 'p':
+		  opt.port = strtol(optarg, 0, 10);
+		  if (opt.verbose) cout << "\noption \"-o\" with arg " << optarg;
+		  break;
+
+	  case 'i':
+		  opt.IP = htonl(inet_addr(optarg));
+		  if (opt.verbose) cout << "\noption \"-i\" with arg " << optarg;
+		  break;
+
+	  case 'n':
+		  opt.useUDP = true;
+		  if (opt.verbose) cout << "\noption \"-d\"";
+		  break;
+
       case 'h':
         cout<<
         "\ndatagenerator is a program to simulate the data export of TECHNODOLLY camera cranes."
@@ -361,8 +381,19 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         "\n -v, --verbose        increase verbosity"
         "\n -t, --ascii          generate ASCII output instead of binary"
         "\n -d, --device DEV     write to character device or file DEV. Defaults to /dev/ttyS0."
-		"\n --network PORT		start UDP streaming on a specified port number" 
-        "\n -o, --open FILENAME	 send packets from a cgi file"
+		"\n -n, --udp            send UDP data over network. It uses any found network interface "
+		"\n                      on this machine. There is currently no way to select the network "
+		"\n                      interface to use if this machine provides more then one."
+		"\n                      The source port is always 15246."
+		"\n                      The desination address and port can be changed by using "
+		"\n                      parameters '--ip' and '--port'. It defaults to "
+		"\n                      127.0.0.1:15245."
+		"\n                      When option '--udp'is choosen, the 'device' option has no effect."
+		"\n -p, --ip             IP address packets are sent to."
+								"Default is 127.0.0.1 (loopback device)."
+		"\n -r, --port           UDP port number packets are sent "
+								"to. Default is 15245."
+		"\n -o, --open FILENAME	 send packets from a cgi file"
 		"\n -e, --errors NUM     generate a checksum error for each NUMth packet."
         "\n -f, --fps FLT        generate FLT packets per second. Defaults to 25."
         "\n --timecode           generate timecode. In ASCII mode, the timecode is appended in the"
@@ -379,7 +410,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
         "\n                      depends on the move type."
         "\n -a, --offset FLT     set the offset for subsequent moves to FLT. The default"
         "\n                      depends on the move type."
-        "\n -p, --phase FLT      set the phase for subsequent moves to FLT degrees. The default"
+        "\n -P, --phase FLT      set the phase for subsequent moves to FLT degrees. The default"
         "\n                      is zero."
         "\n -s, --no-smooth      use trapezoidal oscillations instead of sinusoidal ones."
         "\n"
@@ -628,85 +659,49 @@ int binary2ASCII(const CGIDataCartesian &data, char *buf){
    }
 
 
-
-
-#ifndef _MSC_VER  
-	int fd = 0;
+int writeData(const SHandleID& fd, const void *buf, int length, const DGOptions &opt) 
+{
+	int charsWritten;
+	if (!opt.useUDP) 
+	{
+#ifndef _MSC_VER
+		charsWritten = write(fd.m_Handle, &buf, length);
 #else
-	int lSocket = 0;
-	HANDLE fd=0;
+		DWORD written;
+		//for (int i = 0; i < length; ++i)
+		{
+			//WriteFile(fd.m_Handle, &buf[i], 1, &written, NULL);
+			WriteFile(fd.m_Handle, buf, length, &written, NULL);
+		}
+
+		charsWritten = written; // length;
 #endif
-
-int StartServer(DGOptions &opt)
-{
-	if (opt.generator_type & DGOptions::GENERATOR_NETWORK)
-	{
-	
-		lSocket = Network_StartServer(opt.server_port);
 	}
-
-	if (opt.generator_type & DGOptions::GENERATOR_SERIAL)
+	else 
 	{
-		#ifndef _MSC_VER  
+		struct sockaddr_in destAddr;
+		int destAddrLen = sizeof(destAddr);
+		destAddr.sin_family = AF_INET;
+		//destAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		destAddr.sin_addr.s_addr = htonl(opt.IP);
+		destAddr.sin_port = htons(opt.port);
+		charsWritten = sendto(fd.m_Socket, static_cast<const char*>(buf), length, 0, (struct sockaddr *)&destAddr, destAddrLen);
+		cout << std::dec << "\nWriting " << charsWritten << " bytes to " << inet_ntoa(destAddr.sin_addr)
+			<< ":" << ntohs(destAddr.sin_port) << std::endl;
 
-		  fd = open(opt.device.c_str(), O_WRONLY | O_CREAT);
-
-		  if(fd == -1){
-			  cout<<"\n"<<strerror(errno)<<"!\ncannot open "<<opt.device.c_str()<<"!\n";
-			return(-1); 
-		  }
-
-		#else
-
-		  fd = CreateFile( opt.device.c_str(),
-									GENERIC_READ | GENERIC_WRITE,
-									0,
-									NULL,	// default security attributes
-									OPEN_EXISTING,
-									0,		// not overlapped I/O
-									NULL ); // hTemplate must be NULL for comm devices
-
-		  if (INVALID_HANDLE_VALUE == fd) 
-			{
-				//  Handle the error.
-				printf ("CreateFile failed with error %d.\n", GetLastError());
-				return (1);
-			}
-
-		#endif
-
-		setSerialAttributes(fd);
+		//for(int i = 0; i < length; i+=8){
+		//  for(int j = 0; j < 8; j++){
+		//    cout<<"0x"<<std::hex<<std::setw(2)<<(int)(((unsigned char*)buf)[i+j])<<"  ";
+		//  }
+		//  cout<<"\n";
+			//} 
 	}
-
-  return 0;
+	return(charsWritten);
 }
 
-int ClientSend(const DGOptions &opt, unsigned char *buf, int length, int &charsWritten)
+bool LoadPackets(const char *filename, const float frame_rate, std::vector<CGIDataCartesian> &packets)
 {
-	if (opt.generator_type & DGOptions::GENERATOR_NETWORK)
-	{
-		charsWritten = Network_ClientSend(lSocket, opt.client_port, buf, length);
-	}
-
-	if (opt.generator_type & DGOptions::GENERATOR_SERIAL)
-	{
-			#ifndef _MSC_VER
-				  charsWritten = write(fd, &buf, length); 
-			#else
-				DWORD written;	
-				for (int i=0; i<length; ++i)
-				  WriteFile(fd, &buf[i], 1, &written, NULL);
-
-				 charsWritten = length;
-			#endif
-	}
-
-	return charsWritten;
-}
-
-bool LoadPackets(const char *filename, const float frameRate, std::vector<CGIDataCartesian> &packets)
-{
-	bool lSuccess = false;
+	bool success = false;
 	std::ifstream in(filename);
 
 	try
@@ -722,14 +717,11 @@ bool LoadPackets(const char *filename, const float frameRate, std::vector<CGIDat
 		while((c = in.get()) != EOF && c <= 127) 
 			;
 
-		// rewind
-		//in.seekg(0);
 		in.close();
 		
-		//CGIDataCartesianVersion1 data;
 		CGIDataCartesian data;
 		memset( &data, 0, sizeof(CGIDataCartesian) );
-		int packetNumber = 0;
+		int packet_number = 0;
 
 		if(c == EOF) {
 			/* file is all ASCII */
@@ -737,18 +729,18 @@ bool LoadPackets(const char *filename, const float frameRate, std::vector<CGIDat
 			in.open( filename, std::fstream::in );
 
 			char line[1024];
-			char startLetter='-';
-			int  frameNumber=-1;
+			char start_letter='-';
+			int  frame_number=-1;
 			
 			int temp=0;
-			bool okStatus=true;
+
 			do
 			{
 				in.getline(line,1024,'\n');
 				if (in.eof()) break;
 				int parse=sscanf(line,
 					"%c%d.00,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%f",
-					&startLetter, &frameNumber,
+					&start_letter, &frame_number,
 					&data.x, &data.y, &data.z,
 					&data.pan, &data.tilt, &data.roll,
 					&data.zoom, &data.focus, &data.iris,
@@ -771,17 +763,17 @@ bool LoadPackets(const char *filename, const float frameRate, std::vector<CGIDat
 					throw std::exception("loadCGI ERROR: Parse error for line ...");
 				}
             
-				data.packetNumber = packetNumber;
+				data.packetNumber = packet_number;
 			
-				CGIDataCartesianVersion1* ptr=(CGIDataCartesianVersion1*) & data;
+				CGIDataCartesianVersion1* ptr=reinterpret_cast<CGIDataCartesianVersion1*>(&data);
 			
-				ptr->frameNumber = frameNumber;
-				ptr->time = static_cast<float>(frameNumber/frameRate);
+				ptr->frameNumber = frame_number;
+				ptr->time = static_cast<float>(frame_number/frame_rate);
 
 				//m_data.push_back(*ptr);
 				packets.push_back(data);
 
-				packetNumber += 1;
+				packet_number += 1;
 			}
 			while (!in.eof());
 			/*
@@ -807,23 +799,23 @@ bool LoadPackets(const char *filename, const float frameRate, std::vector<CGIDat
 
 			do
 			{
-				in.read( (char*) &data, sizeof(CGIDataCartesian) );
-				data.packetNumber = packetNumber;
+				in.read( reinterpret_cast<char*>(&data), sizeof(CGIDataCartesian) );
+				data.packetNumber = packet_number;
 
 				packets.push_back(data);
-				packetNumber += 1;
+				packet_number += 1;
 			}
 			while (!in.eof() );
 		}
 
-		lSuccess = true;
+		success = true;
 	}
 	catch( const std::exception &e )
 	{
 		printf( "[ERROR: Technocrane Importer] - %s\n", e.what() );
 	}
 
-	return lSuccess;
+	return success;
 }
 
 int main(int argc, char **argv){
@@ -833,28 +825,73 @@ int main(int argc, char **argv){
   CGIDataCartesian data;
   struct CGIDataCartesianVersion1 *data1 = (struct CGIDataCartesianVersion1*)(void*)&data;
   struct CGIDataCartesianVersion2 *data2 = (struct CGIDataCartesianVersion2*)(void*)&data;
+  SHandleID fd;
   setDefaults(data);
 
   // this is for option to send packets from a source file
-  size_t currPacketFrame=0;
+  size_t cgi_frame=0;
   std::vector<CGIDataCartesian>		packets;
-  if (opt.sourcefname.size() > 0)
-  {
-	  LoadPackets(opt.sourcefname.c_str(), (float)opt.fps, packets);
-  }
 
-  if (opt.generator_type & DGOptions::GENERATOR_NETWORK)
+  if (opt.cgi_fname.size() > 0)
   {
-	  if (false == Network_Initialize() )
+	  const bool status = LoadPackets(opt.cgi_fname.c_str(), (float)opt.fps, packets);
+
+	  if (status)
 	  {
-		  printf ("Network Initialize failed with error %d.\n", GetLastError());
-		  return (1);
+		  printf("Packets read... Done\n");
 	  }
   }
+  
 
-  int status = StartServer(opt);
-  if (0 != status)
-	  return status;
+  if (!opt.useUDP) {
+#ifndef _MSC_VER
+	  fd.m_Handle = open(opt.device.c_str(), O_WRONLY | O_CREAT);
+	  if (fd.m_Handle == -1) {
+		  cout << "\n" << strerror(errno) << "!\ncannot open " << opt.device << "!\n";
+		  return(-1);
+	  }
+#else
+	  fd.m_Handle = CreateFile(opt.device.c_str(),
+		  GENERIC_READ | GENERIC_WRITE,
+		  0,
+		  NULL,	// default security attributes
+		  OPEN_EXISTING,
+		  0,		// not overlapped I/O
+		  NULL); // hTemplate must be NULL for comm devices
+
+	  if (INVALID_HANDLE_VALUE == fd.m_Handle)
+	  {
+		  //  Handle the error.
+		  printf("Device CreateFile failed with error %d.\n", GetLastError());
+		  return (1);
+	  }
+#endif
+	  setSerialAttributes(fd.m_Handle);
+  }
+  else 
+  {
+#ifdef _MSC_VER
+	  Network_Initialize();
+#endif
+
+	  struct sockaddr_in serverAddr, clientAddr;
+	  int serverAddrLen = sizeof(serverAddr);
+	  fd.m_Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	  serverAddr.sin_family = AF_INET;
+	  serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	  serverAddr.sin_port = htons(15246);
+	  bind(fd.m_Socket, (struct sockaddr *)&serverAddr, serverAddrLen);
+	  clientAddr.sin_family = AF_INET;
+	  clientAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	  clientAddr.sin_port = htons(15245);
+	  (void)clientAddr;
+	  //With the line below, I could define a default destination 
+	  //address and port in clientAddr. Then, I could use send(...) instead of sendto(...)
+	  //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
+
+  }
+
+  printf("Device started... Done\n");
 
   double time;
   timeval2 actualTime, nextTime, sleepTime, stepTime, startTime, relTime;
@@ -888,46 +925,34 @@ int main(int argc, char **argv){
     continue;
     */
 
-    timersub(&nextTime, &startTime, &relTime);
-    time         = relTime.tv_sec + 0.000001 * relTime.tv_usec;
-    data.packetNumber = (u32)  loop;
-
+    
 	// source cgi file - based data for the packet
-	if (packets.size() > 0)
+	if (!packets.empty())
 	{
-		CGIDataCartesian	&filePacket = packets[currPacketFrame];
-		
-		data.x = filePacket.x;
-		data.y = filePacket.y;
-		data.z = filePacket.z;
-		data.pan = filePacket.pan;
-		data.tilt = filePacket.tilt;
-		data.roll = filePacket.roll;
-		data.zoom = filePacket.zoom;
-		data.focus = filePacket.focus;
-		data.iris = filePacket.iris;
-		data.spare = filePacket.spare;
-
-		currPacketFrame += 1;
-		if (currPacketFrame >= packets.size())
-			currPacketFrame = 0;
+		const CGIDataCartesian	&file_packet = packets[cgi_frame];
+		memcpy(&data, &file_packet, sizeof(CGIDataCartesian));
+		cgi_frame = (cgi_frame < packets.size()) ? cgi_frame + 1 : 0;
 	}
 
-    if(!opt.timecodeOn){
-      data1->frameNumber  = (u32)  loop;
-      data1->time         = (float)time;
-    }else{
+	timersub(&nextTime, &startTime, &relTime);
+	time = relTime.tv_sec + 0.000001 * relTime.tv_usec;
+	data.packetNumber = static_cast<u32>(loop);
+
+    if(!opt.timecodeOn)
+	{
+      data1->frameNumber  = static_cast<u32>(loop);
+      data1->time         = static_cast<float>(time);
+    }
+	else
+	{
       struct timeCodeAPIStruct TC;
       time2TimeCodeAPI(&TC, time, 0);
       data2->timeCode = TCAPI2timeCode(&TC);
       data2->timeCodeUserBits = ('u'<<24) + ('s'<<16) + ('e'<<8) + 'r'; 
-
-	  float test = -0.25f;
-	  data2->timeCodeUserBits = *(u32*)&test;
     }
 
-	// parameteric-based data for the packet
-	if ( 0 == packets.size() )
+	// parameteric-based data only if no cgi file streaming
+	if ( packets.empty() )
 	{
 		setData(time, data, opt);
 	}
@@ -943,33 +968,29 @@ int main(int argc, char **argv){
     if(timercmp(&nextTime, &actualTime, >)){
       timersub(&nextTime, &actualTime, &sleepTime);
       if(opt.verbose) cout<<" Sleeping for "<<sleepTime.tv_usec / 1000000.0<<" s."<<flush;
-      ShortSleep(0.001f * (float) sleepTime.tv_usec);
-	  //Sleep(100);
+#ifdef _MSC_VER
+	  ShortSleep(0.001f * (float) sleepTime.tv_usec);
+#else
+	  usleep(sleepTime.tv_usec);
+#endif
     }
 
-	// write to COM port
-    if(opt.ascii)
-	{
-		// ascii
-      char buf[400];
-      length = binary2ASCII(data, buf);
-
-	  ClientSend(opt, (unsigned char*) buf, length, charsWritten);
-
-      cout<<"\nWriting "<<length<<" bytes"; 
-    
+	if (opt.ascii) {
+		char buf[400];
+		length = binary2ASCII(data, buf);
+		charsWritten = writeData(fd, &buf, length, opt);
+		cout << "\nWriting " << length << " bytes";
 	}
-	else
+	else {
+		length = sizeof(data);
+		charsWritten = writeData(fd, &data, length, opt);
+	}
+    if(charsWritten != length)
 	{
-		// binary
-      length = sizeof(data);
-
-	  ClientSend(opt, (unsigned char*) &data, length, charsWritten);
-    }
-
-	// check for error
-    if(charsWritten != length){
-      cerr<<"Could write only "<<charsWritten<<" bytes of "<<length<<". Exiting...";
+      cerr<<"Could write only "<<charsWritten<<" bytes of "<<length<<". Exiting..."<<std::endl;
+#ifdef _MSC_VER
+	  cerr << "Last Error Code: " << GetLastError << std::endl;
+#endif
       return(-1);
     }
 
@@ -979,14 +1000,14 @@ int main(int argc, char **argv){
       cout<<"\nSent a packet at "<<relTime.tv_sec<<"."<<setw(6)<<setfill('0')
           <<relTime.tv_usec<<" s.";
     }
+#ifdef _MSC_VER
 	Sleep(40);
+#endif
   } // next loop
 
-  if (opt.generator_type & DGOptions::GENERATOR_NETWORK)
-  {
-	  Network_StopServer(lSocket);
-	  Network_Cleanup();
-  }
+#ifdef _MSC_VER
+  Network_Cleanup();
+#endif
 
   return(0);
 }

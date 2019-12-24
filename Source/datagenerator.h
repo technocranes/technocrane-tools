@@ -1,6 +1,12 @@
 #ifndef DATADISPLAY
 #define DATADISPLAY
 
+#ifndef _MSC_VER
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#endif
+
 #include <cfloat>
 
 /*
@@ -14,15 +20,9 @@
 class DGOptions{
  public:
   enum{x = 256, y, z, pan, tilt, roll, zoom, focus, iris, panTilt, xyPan, loop, eight, 
-       random, randomFull, run_start, run_end, cam_start, cam_end, time_code, filename,
-	network}; 
+       random, randomFull, run_start, run_end, cam_start, cam_end, time_code, filename}; 
   
   enum{frameRatePAL = 25};
-
-  enum{
-	GENERATOR_SERIAL	= 0x1 << 0,
-	GENERATOR_NETWORK	= 0x1 << 1
-  };
 
   DGOptions() : paramInvalid(-DBL_MAX), fps (25), 
                 periode(paramInvalid), amplitude(paramInvalid), offset(paramInvalid), 
@@ -33,11 +33,9 @@ class DGOptions{
                    zoomOpt(0), focusOpt(0),    irisOpt(0), 
                 panTiltOpt(0), xyPanOpt(0),    loopOpt(0), eightOpt(0), 
                 smooth(true), randomBool(false), randomFullBool(false), verbose(false), 
-		ascii(false), timecodeOn(false), device("/dev/ttyS0"),
-		server_port(3104),
-		client_port(3140),
-		generator_type(GENERATOR_SERIAL),
-		sourcefname("")
+		ascii(false), timecodeOn(false), useUDP(false), port(15245),
+	  IP(ntohl(inet_addr("127.0.0.1"))), device("/dev/ttyS0"),
+		cgi_fname("")
   {
 #ifdef _MSC_VER
 	device = "COM1";
@@ -55,11 +53,11 @@ class DGOptions{
                              *panTiltOpt, *xyPanOpt, *loopOpt, *eightOpt; 
   bool smooth, randomBool, randomFullBool, verbose, ascii, timecodeOn;
   std::string device;
-  int	server_port;
-  int	client_port;
-  int	generator_type;
+  bool useUDP;
+  u16 port;
+  u32 IP;
   // cgi file to get packets from
-  std::string	sourcefname;	
+  std::string	cgi_fname;	
 };
 
 /*
