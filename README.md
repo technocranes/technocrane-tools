@@ -30,6 +30,20 @@ datagenerator.exe --open "D:\\Work\\Technocrane\\Result\\test-cgi.cgi" --timecod
 To stream with network connection, you can use argument -n
 For a detailed description please run the application with argument -h
 
+## CGI Convertion
+
+ This is a Windows console application that can help to convert between cgi/fbx into cgi/fbx for different rotation order and file version (for example, new fbx into old version of fbx, etc.)
+ Application is presented in a Release tab of the repository.
+ 
+ Please use -h argument to get details about application arguments
+
+List of arguments
+ * -r  --frame_rate <double>      Specify a file frame rate
+ * -f --file <file_name> 	File Name to Convert (cgi or fbx)
+ * -o --output <file_name> File Name to Save A Convertion Into
+ * -v --version <fbx format desc> Specify a fbx save format
+ * --rotation_order <order desc> Specify a rotation order for fbx export (XYZ, XZY)
+
 ## Sources
 
   Sources are designed to be compiled under Windows and Unit systems.
