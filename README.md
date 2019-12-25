@@ -2,6 +2,7 @@
  Tools that help to emulate data packets or analyze incoming packets data
 The binaries could be found in Release section of the repository.
 
+[![Downloads](https://img.shields.io/github/downloads/technocranes/technocrane-tools/1.0/total.svg)](https://github.com/technocranes/technocrane-tools/releases/tag/1.0)
 <p align="left">
   <a href="https://github.com/technocranes/technocrane-tools/Projects"><img alt="GitHub Actions status" src="https://github.com/technocranes/technocrane-tools/workflows/Main%20workflow/badge.svg"></a>
 </p>
