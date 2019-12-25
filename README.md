@@ -30,6 +30,8 @@ datagenerator.exe --open "D:\\Work\\Technocrane\\Result\\test-cgi.cgi" --timecod
 To stream with network connection, you can use argument -n
 For a detailed description please run the application with argument -h
 
+ In case of serial communication by default the generator application will try to stream into COM1 port. The port must be open for writing. If you want to choose another port, use --device argument. Here is an example of additional arguments --device "COM4"
+
 ## CGI/FBX Convertion
 
  This is a Windows console application that can help to convert between cgi/fbx into cgi/fbx for different rotation order and file version (for example, new fbx into old version of fbx, etc.)
