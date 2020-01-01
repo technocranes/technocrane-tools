@@ -668,13 +668,15 @@ int writeData(const SHandleID& fd, const void *buf, int length, const DGOptions 
 		charsWritten = write(fd.m_Handle, &buf, length);
 #else
 		DWORD written;
-		//for (int i = 0; i < length; ++i)
+		const char* data_buffer = static_cast<const char*>(buf);
+
+		for (int i = 0; i < length; ++i)
 		{
-			//WriteFile(fd.m_Handle, &buf[i], 1, &written, NULL);
-			WriteFile(fd.m_Handle, buf, length, &written, NULL);
+			WriteFile(fd.m_Handle, &data_buffer[i], 1, &written, NULL);
+			//WriteFile(fd.m_Handle, buf, length, &written, NULL);
 		}
 
-		charsWritten = written; // length;
+		charsWritten = length; //  written; //
 #endif
 	}
 	else 
@@ -797,15 +799,30 @@ bool LoadPackets(const char *filename, const float frame_rate, std::vector<CGIDa
 			// load as binary
 			in.open( filename, std::fstream::in | std::fstream::binary );
 
-			do
-			{
-				in.read( reinterpret_cast<char*>(&data), sizeof(CGIDataCartesian) );
-				data.packetNumber = packet_number;
+			in.ignore(std::numeric_limits<std::streamsize>::max());
+			std::streamsize length = in.gcount();
+			in.clear();   //  Since ignore will have set eof.
+			in.seekg(0, std::ios_base::beg);
 
-				packets.push_back(data);
-				packet_number += 1;
+			if (length <= 0)
+			{
+				throw std::exception("File size is empty");
 			}
-			while (!in.eof() );
+
+			const int number_of_packets = length / sizeof(CGIDataCartesian);
+
+			if (number_of_packets == 0 || length % sizeof(CGIDataCartesian) != 0)
+			{
+				throw std::exception("Wrong file content");
+			}
+
+			packets.resize(number_of_packets);
+
+			for (int i = 0; i < number_of_packets; ++i)
+			{
+				in.read(reinterpret_cast<char*>(&packets[i]), sizeof(CGIDataCartesian));
+				packets[i].packetNumber = i;
+			}
 		}
 
 		success = true;

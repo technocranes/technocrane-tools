@@ -139,7 +139,8 @@ struct spareArea{
   unsigned int running   :  1;
   unsigned int cameraOn  :  1;
   unsigned int syncDelay : 20;//unit: microsecs
-  unsigned int spare     : 10;
+  unsigned int recording : 1;
+  unsigned int spare     : 9; // 9 bits for future use
   float trackPos;
   //30 bits for future use
 };

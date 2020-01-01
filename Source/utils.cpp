@@ -250,7 +250,7 @@ std::ostream& operator<< (std::ostream& o, const CGIDataCartesian &data){
 
 
   o<<std::hex<<std::setw(8)<<std::setfill('0');
-  o<<"\nrun / camera:  "<<data.spare.running<<" / "<<data.spare.cameraOn;  
+  o<<"\nrec / run / camera:  "<<data.spare.recording<< " / " <<data.spare.running<<" / "<<data.spare.cameraOn;
   //o<<"\nspare2:        0x"<<std::setw(8)<<getU32FromVoid&(data.spare[4]);
   o<<"\nspare-32:      0x"<<std::setw(8)<< getU32FromVoid(&(data.spare));
   o<<"\ntrack:         "<<data.spare.trackPos;

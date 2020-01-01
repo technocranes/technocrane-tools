@@ -314,8 +314,8 @@ int main(int argc, char **argv)
   getOptions(argc, argv, opt);
   CGIDataCartesian data;
   class dataReceptionStatus DRS;
-  const int bufSize = 300;
-  char buf[bufSize];
+  const int buf_size = 300;
+  char buf[buf_size] = { 0 };
   
   bool isRegularFile = false;
   std::string fromAddress;
@@ -375,13 +375,14 @@ int main(int argc, char **argv)
 
   while(1)
   {
-    int charsRead = readData(fd, buf, bufSize, opt, &fromAddress);
+    int charsRead = readData(fd, buf, buf_size, opt, &fromAddress);
     
 	  static int charCount = -1;
     //static int errorCount = -1;
     int fillState = CGI_DATA_LENGTH;
     //cout<<"chars read: "<<charsRead<<"\n";
-    for(int i = 0; i < charsRead; i++){
+    for(int i = 0; i < charsRead; i++)
+	{
       DRS.totalCharsRead++;
       charCount++;
       u8 input = buf[i];
