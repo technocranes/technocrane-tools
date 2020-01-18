@@ -33,7 +33,7 @@ class DGOptions{
                    zoomOpt(0), focusOpt(0),    irisOpt(0), 
                 panTiltOpt(0), xyPanOpt(0),    loopOpt(0), eightOpt(0), 
                 smooth(true), randomBool(false), randomFullBool(false), verbose(false), 
-		ascii(false), timecodeOn(false), useUDP(false), port(15245),
+		ascii(false), timecodeOn(false), useUDP(false), port(15246), broadcast(0),
 	  IP(ntohl(inet_addr("127.0.0.1"))), device("/dev/ttyS0"),
 		cgi_fname("")
   {
@@ -55,6 +55,7 @@ class DGOptions{
   std::string device;
   bool useUDP;
   u16 port;
+  char broadcast;
   u32 IP;
   // cgi file to get packets from
   std::string	cgi_fname;	

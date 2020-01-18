@@ -117,6 +117,7 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
 	  {"udp",           0, 0, 'n'},
 	  {"ip",            1, 0, 'p'},
 	  {"port",          1, 0, 'r'},
+	  {"broadcast",		0, 0, 'b'},
 	  {"open",			1, 0, opt.filename},
       {0,               0, 0, 0}
     };
@@ -366,6 +367,11 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
 		  if (opt.verbose) cout << "\noption \"-d\"";
 		  break;
 
+	  case 'b':
+		  opt.broadcast = 1;
+		  if (opt.verbose) cout << "\noption \"-b\"";
+		  break;
+
       case 'h':
         cout<<
         "\ndatagenerator is a program to simulate the data export of TECHNODOLLY camera cranes."
@@ -387,12 +393,13 @@ void getOptions(int argc, char * const argv[], DGOptions &opt){
 		"\n                      The source port is always 15246."
 		"\n                      The desination address and port can be changed by using "
 		"\n                      parameters '--ip' and '--port'. It defaults to "
-		"\n                      127.0.0.1:15245."
+		"\n                      127.0.0.1:15246."
 		"\n                      When option '--udp'is choosen, the 'device' option has no effect."
 		"\n -p, --ip             IP address packets are sent to."
 								"Default is 127.0.0.1 (loopback device)."
 		"\n -r, --port           UDP port number packets are sent "
-								"to. Default is 15245."
+								"to. Default is 15246."
+		"\n -b, --broadcast      UDP broadcast option"
 		"\n -o, --open FILENAME	 send packets from a cgi file"
 		"\n -e, --errors NUM     generate a checksum error for each NUMth packet."
         "\n -f, --fps FLT        generate FLT packets per second. Defaults to 25."
@@ -681,15 +688,23 @@ int writeData(const SHandleID& fd, const void *buf, int length, const DGOptions 
 	}
 	else 
 	{
-		struct sockaddr_in destAddr;
-		int destAddrLen = sizeof(destAddr);
-		destAddr.sin_family = AF_INET;
-		//destAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-		destAddr.sin_addr.s_addr = htonl(opt.IP);
-		destAddr.sin_port = htons(opt.port);
-		charsWritten = sendto(fd.m_Socket, static_cast<const char*>(buf), length, 0, (struct sockaddr *)&destAddr, destAddrLen);
-		cout << std::dec << "\nWriting " << charsWritten << " bytes to " << inet_ntoa(destAddr.sin_addr)
-			<< ":" << ntohs(destAddr.sin_port) << std::endl;
+		struct sockaddr_in dest_addr;
+		const int dest_addr_len = sizeof(dest_addr);
+		dest_addr.sin_family = AF_INET;
+		//dest_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		if (opt.broadcast)
+		{
+			dest_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
+		}
+		else
+		{
+			dest_addr.sin_addr.s_addr = htonl(opt.IP);
+		}
+		dest_addr.sin_port = htons(opt.port);
+		
+		charsWritten = sendto(fd.m_Socket, static_cast<const char*>(buf), length, 0, (struct sockaddr *)&dest_addr, dest_addr_len);
+		cout << std::dec << "\nWriting " << charsWritten << " bytes to " << inet_ntoa(dest_addr.sin_addr)
+			<< ":" << ntohs(dest_addr.sin_port) << std::endl;
 
 		//for(int i = 0; i < length; i+=8){
 		//  for(int j = 0; j < 8; j++){
@@ -894,18 +909,30 @@ int main(int argc, char **argv){
 	  struct sockaddr_in serverAddr, clientAddr;
 	  int serverAddrLen = sizeof(serverAddr);
 	  fd.m_Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+	  if (opt.broadcast > 0)
+	  {
+		  if (setsockopt(fd.m_Socket, SOL_SOCKET, SO_BROADCAST, &opt.broadcast, sizeof(opt.broadcast)) < 0)
+		  {
+			  cout << "Error in setting Broadcast option" << endl;
+			  closesocket(fd.m_Socket);
+
+			  return 0;
+		  }
+	  }
+
 	  serverAddr.sin_family = AF_INET;
 	  serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	  serverAddr.sin_port = htons(15246);
+	  serverAddr.sin_port = htons(15245);
 	  bind(fd.m_Socket, (struct sockaddr *)&serverAddr, serverAddrLen);
 	  clientAddr.sin_family = AF_INET;
 	  clientAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	  clientAddr.sin_port = htons(15245);
+	  clientAddr.sin_port = htons(15246);
 	  (void)clientAddr;
 	  //With the line below, I could define a default destination 
 	  //address and port in clientAddr. Then, I could use send(...) instead of sendto(...)
 	  //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
-
+	  
   }
 
   printf("Device started... Done\n");

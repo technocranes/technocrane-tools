@@ -92,6 +92,7 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
       {"device",        1, 0, 'd'},
       {"udp",           0, 0, 'n'},
       {"port",          1, 0, 'o'},
+	  {"broadcast",		0, 0, 'b'},
       {0,               0, 0, 0}
     };
 
@@ -155,6 +156,11 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
         if(opt.verbose) cout<<"\noption \"-d\"";
        break;
 
+	  case 'b':
+		  opt.broadcast = 1;
+		  if (opt.verbose) cout << "\noption \"-b\"";
+		  break;
+
       case 'h':
         cout<<
         "\ndatadisplay is a program to display the data export of TECHNODOLLY camera cranes"
@@ -177,7 +183,8 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
         "\n                      When option '--udp' is choosen, the '--device' option has "
         "\n                      no effect." 
         "\n -o, --port           UDP port number on this machine which packets must be addressed "
-                                 "to. Default is 15245."
+                                 "to. Default is 15246."
+		"\n -b, --broadcast		 UDP broadcast option for a socket"
         "\n -s, --no-statistics  don't display some statistical information for each packet."
         "\n -p, --no-packets     don't display packet data."
         "\n -u, --no-unsynced    don't display characters when the receiver is out of sync."
@@ -294,15 +301,21 @@ int readData(const SHandleID& fd, char *buf, int bufSize, const DDOptions &opt, 
   {
 	struct sockaddr_in srcAddr;
     int srcAddrLen = sizeof(srcAddr);
-    int charsRead = recvfrom(fd.m_Socket, buf, bufSize, 0, (struct sockaddr *) &srcAddr, &srcAddrLen);
+    int chars_read = recvfrom(fd.m_Socket, buf, bufSize, 0, (struct sockaddr *) &srcAddr, &srcAddrLen);
+
+	if (chars_read < 0)
+	{
+		cout << "Error while receiving from UDP: " << WSAGetLastError() << std::endl;
+	}
+
     if(from)
     {
       std::ostringstream os;
-      os<<"received "<<charsRead<<" bytes from "<<inet_ntoa(srcAddr.sin_addr)
+      os<<"received "<< chars_read <<" bytes from "<<inet_ntoa(srcAddr.sin_addr)
         <<":"<<ntohs(srcAddr.sin_port);
       *from = os.str();
 		}
-    return(charsRead);
+    return(chars_read);
 	}
 }
 
@@ -359,18 +372,48 @@ int main(int argc, char **argv)
     struct sockaddr_in serverAddr, clientAddr;
     int serverAddrLen = sizeof(serverAddr);
 	fd.m_Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+	if (opt.broadcast > 0)
+	{
+		// This option is needed on the socket in order to be able to receive broadcast messages
+		if (setsockopt(fd.m_Socket, SOL_SOCKET, SO_BROADCAST, &opt.broadcast, sizeof(opt.broadcast)) < 0)
+		{
+			cout << "Error in setting Broadcast option " << WSAGetLastError() << std::endl;
+			closesocket(fd.m_Socket);
+
+			return 0;
+		}
+
+		char one = 1;
+		if (setsockopt(fd.m_Socket, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) < 0)
+		{
+			cout << "Error in setting ReuseAddr option " << WSAGetLastError() << std::endl;
+			closesocket(fd.m_Socket);
+
+			return 0;
+		}
+	}
+
     serverAddr.sin_family = AF_INET; 
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     //serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serverAddr.sin_port = htons(opt.port);
-    bind(fd.m_Socket, (struct sockaddr *)&serverAddr, serverAddrLen);
+    serverAddr.sin_port = htons(15246);
+    
+	bind(fd.m_Socket, (struct sockaddr *)&serverAddr, serverAddrLen);
+
+	int last_error = WSAGetLastError();
+	if (last_error > 0)
+	{
+		cout << "socket last error: " << last_error << std::endl;
+	}
+
     clientAddr.sin_family = AF_INET; 
-    clientAddr.sin_addr.s_addr = inet_addr("192.168.0.112");
-    clientAddr.sin_port = htons(15246);
+	clientAddr.sin_addr.s_addr = htonl(INADDR_ANY); //inet_addr("192.168.0.112");
+    clientAddr.sin_port = htons(opt.port);
     (void)clientAddr;
     //With the line below, I can restrict my reception to packets originating from IP 
     //address and port in clientAddr.
-    //connect(sfd, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
+    //connect(fd.m_Socket, (struct sockaddr *)&clientAddr, sizeof(struct sockaddr_in));
   }
 
   while(1)
