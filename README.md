@@ -49,8 +49,8 @@ List of arguments
 
 ## Sources
 
-  Sources are designed to be compiled under Windows and Unit systems.
-  There are VS 2017/2019 project files to compile application for Windows. Original applications has been made for Unix system and to make them work on Windows I added some open source analog libraries.
+  Sources are designed to be compiled under Windows and Unix platforms.
+  There are VS 2017/2019 project files to compile application for Windows and makefiles for linux and windows mingw. Original applications has been made for Unix system and to make them work on Windows I added some open source analog libraries.
 
 # Contact
 
