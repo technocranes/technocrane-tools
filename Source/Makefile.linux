@@ -1,0 +1,80 @@
+####### Compiler, tools and options
+
+CC       = gcc
+CXX      = g++
+CFLAGS   = -pipe -Wall -W -O2
+CXXFLAGS = -pipe -Wall -W -O2
+INCPATH  = -I.
+LINK     = g++
+#LFLAGS   =  -Wl -L/usr/lib #This is not working for suse 64bit systems (/usr/lib64)
+LFLAGS   =  
+LIBS     = -lm
+TAR      = tar -cf
+GZIP     = gzip -9f
+COPY     = cp -f
+COPY_FILE= $(COPY)
+COPY_DIR = $(COPY) -r
+INSTALL_FILE= $(COPY_FILE)
+INSTALL_DIR = $(COPY_DIR)
+DEL_FILE = rm -f
+SYMLINK  = ln -sf
+DEL_DIR  = rmdir
+MOVE     = mv -f
+CHK_DIR_EXISTS= test -d
+MKDIR    = mkdir -p
+
+
+####### Output directory
+
+OBJECTS_DIR = obj
+
+####### Files
+
+HEADERS = datadisplay.h datagenerator.h cgidata.h utils.h
+#          ../common/include/dataexport.h ../common/include/transformations.h
+SOURCES = datadisplay.cpp datagenerator.cpp utils.cpp cgidata.c
+COMMON_OBJECTS = $(OBJECTS_DIR)/cgidata.o $(OBJECTS_DIR)/utils.o
+TARGETS = datadisplay datagenerator
+
+
+all: $(OBJECTS_DIR) datadisplay datagenerator ../../../../scripts/datadisplay \
+                                              ../../../../scripts/datagenerator
+
+$(OBJECTS_DIR):
+	test -d obj/ || mkdir -p obj/
+
+datadisplay:  $(COMMON_OBJECTS)  $(OBJECTS_DIR)/datadisplay.o
+	$(LINK) $(LFLAGS) -o datadisplay $(OBJECTS_DIR)/datadisplay.o $(COMMON_OBJECTS) $(LIBS)
+
+datagenerator:  $(COMMON_OBJECTS) $(OBJECTS_DIR)/datagenerator.o
+	$(LINK) $(LFLAGS) -o datagenerator $(OBJECTS_DIR)/datagenerator.o $(COMMON_OBJECTS) $(LIBS)
+
+
+
+clean:
+	-$(DEL_FILE) $(COMMON_OBJECTS) $(TARGETS)
+	-$(DEL_FILE) *~core *.core *.aux *.log
+	-$(DEL_FILE) $(OBJECTS_DIR)/*
+
+
+../../../../scripts/datadisplay: datadisplay
+	cp -p datadisplay ../../../../scripts/
+
+../../../../scripts/datagenerator: datagenerator
+	cp -p datagenerator ../../../../scripts/
+
+
+####### Compile
+
+obj/datadisplay.o: datadisplay.cpp $(HEADERS)
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o $(OBJECTS_DIR)/datadisplay.o datadisplay.cpp
+
+obj/datagenerator.o: datagenerator.cpp $(HEADERS)
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o $(OBJECTS_DIR)/datagenerator.o datagenerator.cpp
+
+obj/utils.o: utils.cpp $(HEADERS)
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o $(OBJECTS_DIR)/utils.o utils.cpp
+
+obj/cgidata.o: cgidata.c $(HEADERS)
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o $(OBJECTS_DIR)/cgidata.o cgidata.c
+

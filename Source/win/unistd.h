@@ -40,6 +40,7 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+#ifdef _MSC_VER
 #if (_MSC_VER < 1500)
 /* should be in some equivalent to <sys/types.h> */
 typedef __int8            int8_t;
@@ -51,5 +52,5 @@ typedef unsigned __int16  uint16_t;
 typedef unsigned __int32  uint32_t;
 typedef unsigned __int64  uint64_t;
 #endif
-
+#endif
 #endif /* unistd.h  */

@@ -1,0 +1,42 @@
+TARGET = ./datadisplay
+CC  = \programs\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\gcc
+CXX = \programs\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\g++
+LINK          = $(CXX)
+
+DEFINES       = -DDEBUG_CHECK -D__USER__ -D_MINGW_VER
+CFLAGS        = -O2 -Wall -W $(DEFINES)
+CXXFLAGS      = -O2 -Wundef -g -Wall $(DEFINES) -fpermissive -DSTATIC_GETOPT
+INCPATH       = -I./win
+LFLAGS        = 
+LIBS          = -lm -lwsock32
+OBJECTS       =  utils.o win/network.o cgidata.o ./win/drand48.o ./win/getopt.o ./win/systime.o  ./win/usleep.o ./datadisplay.o
+
+$(TARGET): $(OBJECTS)
+	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(LIBS)
+
+./datadisplay.o: ./datadisplay.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./datadisplay.o ./datadisplay.cpp
+
+./utils.o: ./utils.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./utils.o ./utils.cpp
+
+./cgidata.o: ./cgidata.c
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./cgidata.o ./cgidata.c
+
+./win/network.o: ./win/network.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./win/network.o ./win/network.cpp
+
+./win/drand48.o: ./win/drand48.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./win/drand48.o ./win/drand48.cpp
+
+./win/getopt.o: ./win/getopt.c
+	$(CXX) -c $(CFLAGS) $(INCPATH) -o./win/getopt.o ./win/getopt.c
+
+./win/systime.o: ./win/systime.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./win/systime.o ./win/systime.cpp
+
+./win/usleep.o: ./win/usleep.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o./win/usleep.o ./win/usleep.cpp
+
+clean:
+	rm *.o win/*.o
