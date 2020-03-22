@@ -718,6 +718,8 @@ bool LoadPackets(const char *filename, const float frame_rate,
 		
 		CGIDataCartesian data;
 		memset( &data, 0, sizeof(CGIDataCartesian) );
+		data.syncVal = TDDE_SYNC_VAL;
+		data.checkSum = sizeof(CGIDataCartesian);
 		int packet_number = 0;
 
 		if(c == EOF){
