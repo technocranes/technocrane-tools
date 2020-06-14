@@ -102,7 +102,7 @@ void getOptions(int argc, char * const argv[], DDOptions &opt){
 			{0,               0, 0, 0}
 		};
 
-		c = getopt_long (argc, argv, "crhvd:o:xpsuenb", long_options, &option_index);
+		c = getopt_long (argc, argv, "crhvd:o:xp:suenb", long_options, &option_index);
 		if (c == -1) break;
 
 		switch (c) {
