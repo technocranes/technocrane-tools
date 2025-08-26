@@ -4,27 +4,40 @@ on: [push]
 
 jobs:
   build:
+    runs-on: windows-2019   # or windows-latest
 
-    runs-on: windows-latest
-    
     steps:
-    - uses: actions/checkout@v1
-    - name: Build DataDisplay
-      run: |
-        cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\" 
-        .\MSBuild.exe $Env:GITHUB_WORKSPACE\Source\datadisplay.vcxproj /property:Configuration=Release
-        
-    - uses: actions/upload-artifact@v1
-      with:
-        name: DataDisplay
-        path: Result/DataDisplay.exe
-        
-    - name: Build DataGenerator
-      run: |
-        cd "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\" 
-        .\MSBuild.exe $Env:GITHUB_WORKSPACE\Source\datagenerator.vcxproj /property:Configuration=Release
-        
-    - uses: actions/upload-artifact@v1
-      with:
-        name: DataGenerator
-        path: Result/DataGenerator.exe
+      - uses: actions/checkout@v4
+
+      # Add MSBuild from the installed Visual Studio (2022) to PATH
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: Win32
+
+      # (Optional) If you need a full VC++ dev environment for custom steps:
+      # - uses: ilammy/msvc-dev-cmd@v1
+      #   with:
+      #     arch: x64
+
+      - name: Build DataDisplay
+        shell: pwsh
+        run: |
+          msbuild "$Env:GITHUB_WORKSPACE\Source\datadisplay.vcxproj" `
+            /t:Build /p:Configuration=Release /p:Platform=Win32
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DataDisplay
+          path: Result/DataDisplay.exe
+
+      - name: Build DataGenerator
+        shell: pwsh
+        run: |
+          msbuild "$Env:GITHUB_WORKSPACE\Source\datagenerator.vcxproj" `
+            /t:Build /p:Configuration=Release /p:Platform=Win32
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DataGenerator
+          path: Result/DataGenerator.exe

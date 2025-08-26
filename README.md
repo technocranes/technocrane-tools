@@ -3,9 +3,8 @@
 The binaries could be found in Release section of the repository.
 
 [![Downloads](https://img.shields.io/github/downloads/technocranes/technocrane-tools/1.0/total.svg)](https://github.com/technocranes/technocrane-tools/releases/tag/1.0)
-<p align="left">
-  <a href="https://github.com/technocranes/technocrane-tools/Projects"><img alt="GitHub Actions status" src="https://github.com/technocranes/technocrane-tools/workflows/Main%20workflow/badge.svg"></a>
-</p>
+[![Main workflow](https://github.com/technocranes/technocrane-tools/actions/workflows/ccpp.yml/badge.svg)](https://github.com/technocranes/technocrane-tools/actions/workflows/ccpp.yml)
+
  Main workflow is building Windows release version of data display and data generator after each submit. You can find binaries in articasts list inside an actions workflow page.
  Also binaries are presented in Release tab of the repository.
 
