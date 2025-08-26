@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: windows-2017   # or windows-latest
+    runs-on: windows-2019   # or windows-latest
 
     steps:
       - uses: actions/checkout@v4
